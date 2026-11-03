@@ -1,34 +1,49 @@
 package com.miyavdoku.domain
 
+import kotlin.math.abs
+
+data class PuzzleSearchMetrics(
+    val visitedNodes: Int,
+    val candidateChecks: Int,
+    val solutionCount: Int
+)
+
 /**
- * Counts valid hidden-cat arrangements using only the visible board regions
- * and game rules. The stored answer in PuzzleLevel is deliberately ignored.
+ * Counts valid hidden-cat arrangements using only visible regions and rules.
+ * The stored answer in PuzzleLevel is deliberately ignored.
  */
 object PuzzleSolver {
-    /** Stops at [limit] so uniqueness checks do not enumerate every solution. */
-    fun countSolutions(level: PuzzleLevel, limit: Int = 2): Int {
+    fun countSolutions(level: PuzzleLevel, limit: Int = 2): Int =
+        analyze(level, limit).solutionCount
+
+    /**
+     * Measures how much search is required to prove a board's solution.
+     * This is a consistent puzzle-complexity proxy, not a claim about
+     * every human player's solving time.
+     */
+    fun analyze(level: PuzzleLevel, limit: Int = 2): PuzzleSearchMetrics {
         require(limit > 0)
         val size = level.size
         val usedColumns = BooleanArray(size)
         val usedRegions = HashSet<Int>()
         val chosenColumns = IntArray(size)
-        var count = 0
+        var solutions = 0
+        var nodes = 0
+        var checks = 0
 
         fun search(row: Int) {
-            if (count >= limit) return
+            if (solutions >= limit) return
+            nodes++
             if (row == size) {
-                count++
+                solutions++
                 return
             }
-
             for (column in 0 until size) {
+                checks++
                 if (usedColumns[column]) continue
-                val cell = Cell(row, column)
-                val region = level.regionAt(cell)
+                val region = level.regionAt(Cell(row, column))
                 if (region in usedRegions) continue
-
-                // Cats in consecutive rows cannot share or neighbor columns.
-                if (row > 0 && kotlin.math.abs(chosenColumns[row - 1] - column) <= 1) continue
+                if (row > 0 && abs(chosenColumns[row - 1] - column) <= 1) continue
 
                 usedColumns[column] = true
                 usedRegions.add(region)
@@ -36,12 +51,12 @@ object PuzzleSolver {
                 search(row + 1)
                 usedColumns[column] = false
                 usedRegions.remove(region)
-                if (count >= limit) return
+                if (solutions >= limit) return
             }
         }
 
         search(0)
-        return count
+        return PuzzleSearchMetrics(nodes, checks, solutions)
     }
 
     fun hasUniqueSolution(level: PuzzleLevel): Boolean = countSolutions(level, limit = 2) == 1
