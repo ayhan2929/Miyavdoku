@@ -23,12 +23,12 @@ object LevelGenerator {
 
         for (id in 1..count) {
             var accepted: PuzzleLevel? = null
-            repeat(maxAttemptsPerLevel) {
-                if (accepted != null) return@repeat
+            for (attempt in 0 until maxAttemptsPerLevel) {
+                if (accepted != null) break
                 val columns = (0 until size).shuffled(random)
                 if ((1 until size).any { row ->
                         kotlin.math.abs(columns[row] - columns[row - 1]) <= 1
-                    }) return@repeat
+                    }) continue
 
                 val cats = columns.mapIndexed { row, column -> Cell(row, column) }.toSet()
                 val regions = MutableList(size * size) { random.nextInt(size) }
