@@ -27,8 +27,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun GameScreen() {
     val engine = remember { GameEngine() }
-    var board by remember { mutableStateOf(Board()) }
-    var score by remember { mutableIntStateOf(0) }
+    var game by remember { mutableStateOf(engine.newGame()) }
     var selected by remember { mutableStateOf<Piece?>(null) }
     var status by remember { mutableStateOf("Bir şekil seç, sonra tahtada bir hücreye dokun.") }
 
@@ -40,7 +39,7 @@ private fun GameScreen() {
             Text("MiyavDoku", fontSize = 32.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF7651C9))
             Text("Kedili blok bulmaca", color = Color(0xFF8B7770))
             Spacer(Modifier.height(18.dp))
-            Text("PUAN  $score", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF604B43))
+            Text("PUAN  ${game.score}     EN İYİ  ${game.bestScore}", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF604B43))
             Spacer(Modifier.height(14.dp))
             Column(
                 Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(16.dp)).padding(7.dp),
@@ -52,7 +51,7 @@ private fun GameScreen() {
                             Box(
                                 Modifier.weight(1f).aspectRatio(1f)
                                     .background(
-                                        if (board[row, column]) Color(0xFFFFA45B) else Color(0xFFF0E9E4),
+                                        if (game.board[row, column]) Color(0xFFFFA45B) else Color(0xFFF0E9E4),
                                         RoundedCornerShape(4.dp)
                                     )
                                     .clickable {
@@ -60,14 +59,21 @@ private fun GameScreen() {
                                         if (piece == null) {
                                             status = "Önce bir şekil seç."
                                         } else {
-                                            val turn = engine.place(board, piece, Cell(row, column))
-                                            if (turn == null) {
-                                                status = "Bu şekil bu konuma yerleşmiyor."
+                                            val result = engine.placePiece(game, piece.id, Cell(row, column))
+                                            if (!result.accepted) {
+                                                status = when (result.error) {
+                                                    MoveError.GAME_OVER -> "Oyun bitti. Yeni oyun başlat."
+                                                    MoveError.PIECE_NOT_AVAILABLE -> "Bu şekil artık elinde değil."
+                                                    else -> "Bu şekil bu konuma yerleşmiyor."
+                                                }
                                             } else {
-                                                board = turn.board
-                                                score += turn.points
+                                                game = result.state
                                                 selected = null
-                                                status = if (turn.cleared > 0) "${turn.cleared} hücre temizlendi!" else "Güzel hamle!"
+                                                status = when {
+                                                    game.isGameOver -> "Oyun bitti! Puan: ${game.score}"
+                                                    result.clearSummary.hasClear -> "${result.clearSummary.clearedCells} hücre temizlendi!"
+                                                    else -> "Güzel hamle!"
+                                                }
                                             }
                                         }
                                     }
@@ -82,8 +88,18 @@ private fun GameScreen() {
             Text("ŞEKİL SEÇ", fontWeight = FontWeight.Bold, color = Color(0xFF7651C9))
             Spacer(Modifier.height(8.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                GameEngine.starterPieces.forEach { piece ->
-                    val label = when (piece.id) { "dot" -> "Tek"; "line" -> "Çizgi"; else -> "Kare" }
+                game.availablePieces.forEach { piece ->
+                    val label = when (piece.id) {
+                        "single" -> "Tek"
+                        "domino" -> "İkili"
+                        "line-3" -> "Çizgi"
+                        "line-4" -> "Uzun"
+                        "corner-3" -> "Köşe"
+                        "square-2" -> "Kare"
+                        "t-4" -> "T"
+                        "l-4" -> "L"
+                        else -> "+"
+                    }
                     Button(
                         onClick = { selected = piece; status = "$label şekli seçildi." },
                         modifier = Modifier.weight(1f),
@@ -95,11 +111,13 @@ private fun GameScreen() {
             }
             Spacer(Modifier.height(12.dp))
             OutlinedButton(onClick = {
-                board = Board()
-                score = 0
+                game = engine.newGame(bestScore = game.bestScore)
                 selected = null
                 status = "Yeni oyun başladı."
             }) { Text("Yeni Oyun") }
+            if (game.isGameOver) {
+                Text("En iyi puan: ${game.bestScore}", fontWeight = FontWeight.Bold, color = Color(0xFF7651C9))
+            }
         }
     }
 }
