@@ -48,17 +48,17 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             if (current.game.isFinished) current
             else {
                 val selected = current.copy(selectedCell = cell)
-                applyResult(selected, engine.toggleMark(current.game, cell), "Hücre boş olarak işaretlendi.")
+                applyResult(selected, engine.revealCat(current.game, cell), "Hücre kontrol edildi.")
             }
         }
     }
 
-    fun doubleTapCell(cell: Cell) {
+    fun longPressCell(cell: Cell) {
         _uiState.update { current ->
             if (current.game.isFinished) current
             else {
                 val selected = current.copy(selectedCell = cell)
-                applyResult(selected, engine.revealCat(current.game, cell), "Hücre kontrol edildi.")
+                applyResult(selected, engine.toggleMark(current.game, cell), "Hücre boş olarak işaretlendi.")
             }
         }
     }
