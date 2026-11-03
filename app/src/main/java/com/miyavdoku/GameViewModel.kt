@@ -25,6 +25,26 @@ class GameViewModel : ViewModel() {
         }
     }
 
+    fun tapCell(cell: Cell) {
+        _uiState.update { current ->
+            if (current.game.isFinished) current
+            else {
+                val selected = current.copy(selectedCell = cell)
+                applyResult(selected, engine.toggleMark(current.game, cell), "Hücre boş olarak işaretlendi.")
+            }
+        }
+    }
+
+    fun doubleTapCell(cell: Cell) {
+        _uiState.update { current ->
+            if (current.game.isFinished) current
+            else {
+                val selected = current.copy(selectedCell = cell)
+                applyResult(selected, engine.revealCat(current.game, cell), "Hücre kontrol edildi.")
+            }
+        }
+    }
+
     fun toggleMark() = act("Hücre işaretlendi.") { state, cell -> engine.toggleMark(state, cell) }
     fun clearMark() = act("İşaret temizlendi.") { state, cell -> engine.clearMark(state, cell) }
     fun revealCat() = act("Hücre kontrol edildi.") { state, cell -> engine.revealCat(state, cell) }
