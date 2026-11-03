@@ -59,6 +59,11 @@ class GameViewModel : ViewModel() {
         }
     }
 
+    fun selectLevel(levelId: Int) {
+        val selected = LevelCatalog.levels.firstOrNull { it.id == levelId } ?: return
+        _uiState.update { GameUiState(engine.newGame(selected), message = "${selected.title} başladı. İyi eğlenceler!") }
+    }
+
     fun goToNextLevel() {
         _uiState.update { current ->
             if (!current.game.isWon) current
