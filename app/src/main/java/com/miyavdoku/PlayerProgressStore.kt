@@ -13,7 +13,8 @@ private val Context.playerProgressDataStore by preferencesDataStore(name = "play
 data class PlayerProgress(
     val highestUnlockedLevel: Int = 1,
     val completedLevels: Set<Int> = emptySet(),
-    val totalScore: Int = 0
+    val totalScore: Int = 0,
+    val lastPlayedLevel: Int = 1
 ) {
     fun completeLevel(levelId: Int, earnedScore: Int): PlayerProgress {
         require(levelId > 0)
@@ -27,6 +28,11 @@ data class PlayerProgress(
     }
 
     fun isUnlocked(levelId: Int): Boolean = levelId in 1..highestUnlockedLevel
+
+    fun withLastPlayedLevel(levelId: Int): PlayerProgress {
+        require(isUnlocked(levelId))
+        return copy(lastPlayedLevel = levelId)
+    }
 }
 
 class PlayerProgressStore(context: Context) {
@@ -37,8 +43,16 @@ class PlayerProgressStore(context: Context) {
             highestUnlockedLevel = preferences[HIGHEST_UNLOCKED] ?: 1,
             completedLevels = preferences[COMPLETED_LEVELS].orEmpty()
                 .mapNotNull(String::toIntOrNull).toSet(),
-            totalScore = preferences[TOTAL_SCORE] ?: 0
+            totalScore = preferences[TOTAL_SCORE] ?: 0,
+            lastPlayedLevel = preferences[LAST_PLAYED_LEVEL] ?: 1
         )
+    }
+
+    suspend fun setLastPlayedLevel(levelId: Int) {
+        dataStore.edit { preferences ->
+            val highest = preferences[HIGHEST_UNLOCKED] ?: 1
+            if (levelId in 1..highest) preferences[LAST_PLAYED_LEVEL] = levelId
+        }
     }
 
     suspend fun completeLevel(levelId: Int, earnedScore: Int) {
@@ -47,7 +61,8 @@ class PlayerProgressStore(context: Context) {
                 highestUnlockedLevel = preferences[HIGHEST_UNLOCKED] ?: 1,
                 completedLevels = preferences[COMPLETED_LEVELS].orEmpty()
                     .mapNotNull(String::toIntOrNull).toSet(),
-                totalScore = preferences[TOTAL_SCORE] ?: 0
+                totalScore = preferences[TOTAL_SCORE] ?: 0,
+                lastPlayedLevel = preferences[LAST_PLAYED_LEVEL] ?: 1
             )
             val updated = current.completeLevel(levelId, earnedScore)
             preferences[COMPLETED_LEVELS] = updated.completedLevels.map(Int::toString).toSet()
@@ -60,5 +75,6 @@ class PlayerProgressStore(context: Context) {
         val HIGHEST_UNLOCKED = intPreferencesKey("highest_unlocked_level")
         val COMPLETED_LEVELS = stringSetPreferencesKey("completed_levels")
         val TOTAL_SCORE = intPreferencesKey("total_score")
+        val LAST_PLAYED_LEVEL = intPreferencesKey("last_played_level")
     }
 }
