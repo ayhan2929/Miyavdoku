@@ -1,0 +1,1 @@
+Temporary trigger for extracting the Android project source before Turkish localization.
