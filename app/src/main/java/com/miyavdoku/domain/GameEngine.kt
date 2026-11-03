@@ -104,7 +104,9 @@ class GameEngine {
 
         if (cell !in state.level.catCells) {
             val lives = (state.lives - 1).coerceAtLeast(0)
-            return MoveResult(state.copy(lives = lives, isLost = lives == 0))
+            val marks = state.marks.toMutableList()
+            marks[index(state.level, cell)] = CellMark.EMPTY_MARK
+            return MoveResult(state.copy(marks = marks, lives = lives, isLost = lives == 0))
         }
 
         val marks = state.marks.toMutableList()
