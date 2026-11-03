@@ -25,6 +25,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.miyavdoku.domain.*
@@ -191,9 +197,20 @@ private fun MiyavDokuScreen(viewModel: GameViewModel) {
                                 val cell = Cell(row, col)
                                 val mark = game.markAt(cell)
                                 val selectedCell = ui.selectedCell == cell
+                                val cellStateDescription = when (mark) {
+                                    CellMark.EMPTY_MARK -> "Boş olduğu işaretlendi"
+                                    CellMark.FOUND_CAT -> "Kedi bulundu"
+                                    CellMark.UNKNOWN -> "Henüz kontrol edilmedi"
+                                }
                                 val bg = regionPalette[game.level.regionAt(cell) % regionPalette.size]
                                 Box(Modifier.weight(1f).aspectRatio(1f).background(bg, RoundedCornerShape(9.dp))
                                     .border(if (selectedCell) 3.dp else 1.dp, if (selectedCell) purple else Color.White.copy(alpha = .9f), RoundedCornerShape(9.dp))
+                                    .semantics {
+                                        contentDescription = "${row + 1}. satır, ${col + 1}. sütun"
+                                        stateDescription = cellStateDescription
+                                        role = Role.Button
+                                        selected = selectedCell
+                                    }
                                     .pointerInput(cell, game.isFinished) { detectTapGestures(onTap = { viewModel.tapCell(cell) }, onDoubleTap = { viewModel.doubleTapCell(cell) }) }, contentAlignment = Alignment.Center) {
                                     Text(when (mark) {
                                         CellMark.EMPTY_MARK -> "×"
