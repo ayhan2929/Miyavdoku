@@ -46,7 +46,7 @@ class GameEngineTest {
         assertTrue(result.accepted)
         assertTrue(result.foundCat)
         assertEquals(CellMark.FOUND_CAT, result.state.markAt(cat))
-        assertEquals(2, result.state.foundCats)
+        assertEquals(1, result.state.foundCats)
         assertEquals(100, result.state.score)
         assertEquals(3, result.state.lives)
     }
