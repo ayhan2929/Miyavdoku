@@ -55,7 +55,7 @@ end_marker = '            w = da.indexOf(z);'
 end = js.find(end_marker, start)
 if start < 0 or end < 0:
     raise RuntimeError("Oyun dili seçimi beklenen biçimde bulunamadı.")
-js = js[:start] + '            z = "tr";\\n' + end_marker + js[end + len(end_marker):]
+js = js[:start] + '            z = "tr";\n' + end_marker + js[end + len(end_marker):]
 game_file.write_text(js, encoding="utf-8")
 
 strings_file = root / "app/src/main/res/values/strings.xml"
