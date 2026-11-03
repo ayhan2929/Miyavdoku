@@ -118,8 +118,7 @@ layout_file.write_text(layout, encoding="utf-8")
 manifest_file = root / "app/src/main/AndroidManifest.xml"
 manifest = manifest_file.read_text(encoding="utf-8")
 manifest = re.sub(r'\s*<uses-permission android:name="com\.google\.android\.gms\.permission\.AD_ID"\s*/>', '', manifest)
-manifest = re.sub(r'\s*<meta-data\s+android:name="com\.google\.android\.gms\.ads\.DELAY_APP_MEASUREMENT_INIT".*?/>', '', manifest, flags=re.DOTALL)
-manifest = re.sub(r'\s*<meta-data\s+android:name="com\.google\.android\.gms\.ads\.APPLICATION_ID".*?/>', '', manifest, flags=re.DOTALL)
+# AdMob uygulama kimliği meta verisi SDK'nın başlangıçta çökmesini önlemek için korunur.
 manifest_file.write_text(manifest, encoding="utf-8")
 
 # Banner, geçiş ve ödüllü reklam anahtarlarını kapat.
