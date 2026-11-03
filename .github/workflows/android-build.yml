@@ -24,14 +24,6 @@ jobs:
           test -f MeyveKesme/gradlew
           test -f MeyveKesme/app/build.gradle
 
-      - name: Upload extracted source for localization
-        uses: actions/upload-artifact@v4
-        with:
-          name: meyve-kesme-source
-          path: MeyveKesme/
-          if-no-files-found: error
-          retention-days: 1
-
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
