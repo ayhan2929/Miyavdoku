@@ -131,4 +131,13 @@ hooks = hooks_file.read_text(encoding="utf-8")
 hooks = hooks.replace("gradle.showInter();", "// Reklamlar kapalı.")
 hooks_file.write_text(hooks, encoding="utf-8")
 
+# Banner görünümü kaldırıldığı için eski reklam yöneticisindeki gizleme kodunu null güvenli yap.
+ad_java = root / "app/src/main/java/com/company/game/UtilsAdmob.java"
+ad_code = ad_java.read_text(encoding="utf-8")
+ad_code = ad_code.replace(
+    "AdView banner = activity.findViewById(R.id.adView);\\n                    banner.setVisibility(View.GONE);",
+    "AdView banner = activity.findViewById(R.id.adView);\\n                    if (banner != null) banner.setVisibility(View.GONE);"
+)
+ad_java.write_text(ad_code, encoding="utf-8")
+
 print("Türkçe yerelleştirme uygulandı: 26 oyun metni ve reklam kaldırma, Android sistem metinleri ve gizlilik bildirimi.")
