@@ -119,6 +119,18 @@ class GameEngineTest {
         assertEquals(3, result.state.lives)
     }
 
+    @Test fun wrongGuessCannotBeClearedOrToggledToAvoidRepeatedLifeLoss() {
+        val state = engine.newGame(level)
+        val wrong = (0 until level.size).flatMap { row ->
+            (0 until level.size).map { column -> Cell(row, column) }
+        }.first { it !in level.catCells }
+        val guessed = engine.revealCat(state, wrong).state
+        assertEquals(MoveError.ALREADY_MARKED, engine.clearMark(guessed, wrong).error)
+        assertEquals(MoveError.ALREADY_MARKED, engine.toggleMark(guessed, wrong).error)
+        assertEquals(CellMark.WRONG_GUESS, guessed.markAt(wrong))
+        assertEquals(2, guessed.lives)
+    }
+
     @Test fun catalogContainsThirtyValidLevels() {
         assertEquals(30, LevelCatalog.levels.size)
         LevelCatalog.levels.forEach { assertTrue(engine.isValidSolution(it)) }
