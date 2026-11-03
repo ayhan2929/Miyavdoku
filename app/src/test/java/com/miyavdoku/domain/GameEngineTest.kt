@@ -94,6 +94,31 @@ class GameEngineTest {
         assertEquals(MoveError.OUT_OF_BOUNDS, result.error)
         assertEquals(state, result.state)
     }
+    @Test fun hintRequiresAPlayerDiscoveredCat() {
+        val state = engine.newGame(level)
+        val result = engine.useHint(state)
+        assertEquals(MoveError.NO_HINT_AVAILABLE, result.error)
+        assertEquals(state, result.state)
+    }
+
+    @Test fun hintMarksOnlyCellsRuledOutByFoundCatConstraints() {
+        val cat = level.catCells.first()
+        val state = engine.revealCat(engine.newGame(level), cat).state
+        val result = engine.useHint(state)
+        assertTrue(result.accepted)
+        val hinted = requireNotNull(result.hintedCell)
+        assertEquals(CellMark.EMPTY_MARK, result.state.markAt(hinted))
+        assertTrue(
+            hinted.row == cat.row ||
+                hinted.column == cat.column ||
+                level.regionAt(hinted) == level.regionAt(cat) ||
+                (kotlin.math.abs(hinted.row - cat.row) <= 1 &&
+                    kotlin.math.abs(hinted.column - cat.column) <= 1)
+        )
+        assertEquals(2, result.state.hintsRemaining)
+        assertEquals(3, result.state.lives)
+    }
+
     @Test fun catalogContainsThirtyValidLevels() {
         assertEquals(30, LevelCatalog.levels.size)
         LevelCatalog.levels.forEach { assertTrue(engine.isValidSolution(it)) }
