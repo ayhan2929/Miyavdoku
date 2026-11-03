@@ -95,4 +95,41 @@ privacy = """<br><br>
 """
 (game_dir / "privarcypolicy.txt").write_text(privacy, encoding="utf-8")
 
-print("Türkçe yerelleştirme uygulandı: 26 oyun metni, Android sistem metinleri ve gizlilik bildirimi.")
+# Reklamları tamamen devre dışı bırak ve banner alanını yerleşimden kaldır.
+layout_file = root / "app/src/main/res/layout/activity_main.xml"
+layout = layout_file.read_text(encoding="utf-8")
+layout = re.sub(
+    r'\\s*<com\\.google\\.android\\.gms\\.ads\\.AdView\\b.*?</com\\.google\\.android\\.gms\\.ads\\.AdView>',
+    '',
+    layout,
+    flags=re.DOTALL
+)
+layout_file.write_text(layout, encoding="utf-8")
+
+# Reklam SDK'sının başlatılmasını ve reklam kimliği iznini kaldır.
+manifest_file = root / "app/src/main/AndroidManifest.xml"
+manifest = manifest_file.read_text(encoding="utf-8")
+manifest = re.sub(r'\\s*<uses-permission android:name="com\\.google\\.android\\.gms\\.permission\\.AD_ID"\\s*/>', '', manifest)
+manifest = re.sub(r'\\s*<meta-data\\s+android:name="com\\.google\\.android\\.gms\\.ads\\.DELAY_APP_MEASUREMENT_INIT".*?/>', '', manifest, flags=re.DOTALL)
+manifest = re.sub(r'\\s*<meta-data\\s+android:name="com\\.google\\.android\\.gms\\.ads\\.APPLICATION_ID".*?/>', '', manifest, flags=re.DOTALL)
+manifest_file.write_text(manifest, encoding="utf-8")
+
+# Banner, geçiş ve ödüllü reklam anahtarlarını kapat.
+resource_file = root / "app/src/main/res/values/strings.xml"
+resources = resource_file.read_text(encoding="utf-8")
+for key in ("enable_banner", "enable_inter", "enable_reward"):
+    resources = re.sub(
+        r'(<bool\\s+name="' + key + r'">)\\s*true\\s*(</bool>)',
+        r'\\1false\\2',
+        resources
+    )
+resource_file.write_text(resources, encoding="utf-8")
+
+# Oyun modları arasında reklam çağrısı yapılmasını da engelle.
+hooks_file = game_dir / "hooks.js"
+hooks = hooks_file.read_text(encoding="utf-8")
+hooks = re.sub(r'^\\s*gradle\\.showInter\\(\\);\\s*
+, '', hooks, flags=re.MULTILINE)
+hooks_file.write_text(hooks, encoding="utf-8")
+
+print("Türkçe yerelleştirme uygulandı: 26 oyun metni ve reklam kaldırma, Android sistem metinleri ve gizlilik bildirimi.")
