@@ -48,6 +48,7 @@ private fun MiyavDokuScreen(viewModel: GameViewModel) {
     val ui by viewModel.uiState.collectAsStateWithLifecycle()
     val game = ui.game
     var showLevelPicker by remember { mutableStateOf(false) }
+    var showResultDialog by remember(game.level.id, game.isFinished) { mutableStateOf(game.isFinished) }
     if (showLevelPicker) {
         AlertDialog(
             onDismissRequest = { showLevelPicker = false },
@@ -94,7 +95,7 @@ private fun MiyavDokuScreen(viewModel: GameViewModel) {
             containerColor = paper
         )
     }
-    if (game.isFinished) {
+    if (game.isFinished && showResultDialog) {
         AlertDialog(
             onDismissRequest = { },
             title = {
@@ -127,7 +128,10 @@ private fun MiyavDokuScreen(viewModel: GameViewModel) {
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showLevelPicker = true }) {
+                TextButton(onClick = {
+                    showResultDialog = false
+                    showLevelPicker = true
+                }) {
                     Text("BÖLÜMLER", color = ink)
                 }
             },
