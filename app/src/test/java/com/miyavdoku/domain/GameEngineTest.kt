@@ -90,16 +90,29 @@ class GameEngineTest {
     }
 
     @Test
-    fun fullBoardWithNoPiecesEndsGame() {
+    fun fullBoardHasNoLegalPlacement() {
+        val fullBoard = Board(List(81) { true })
+        assertFalse(engine.hasAnyMove(fullBoard, GameEngine.PIECE_CATALOG))
+    }
+
+    @Test
+    fun completedMoveRefillsAnEmptyTrayWithThreeNewPieces() {
         val single = GameEngine.PIECE_CATALOG.first { it.id == "single" }
-        val state = GameState(
-            board = Board(List(81) { true }),
-            availablePieces = listOf(single)
-        )
+        val state = GameState(availablePieces = listOf(single))
         val result = engine.placePiece(state, single.id, Cell(0, 0))
 
-        assertFalse(result.accepted)
-        assertEquals(MoveError.INVALID_POSITION, result.error)
+        assertTrue(result.accepted)
+        assertEquals(3, result.state.availablePieces.size)
+        assertEquals(1, result.state.movesPlayed)
+    }
+
+    @Test
+    fun gameOverStateRejectsFurtherMoves() {
+        val single = GameEngine.PIECE_CATALOG.first { it.id == "single" }
+        val state = GameState(availablePieces = listOf(single), isGameOver = true)
+        val result = engine.placePiece(state, single.id, Cell(0, 0))
+
+        assertEquals(MoveError.GAME_OVER, result.error)
         assertEquals(state, result.state)
     }
 
