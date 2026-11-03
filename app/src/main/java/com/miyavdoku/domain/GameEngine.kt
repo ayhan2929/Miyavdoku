@@ -5,6 +5,10 @@ import kotlin.math.abs
 data class Cell(val row: Int, val column: Int)
 enum class CellMark { UNKNOWN, EMPTY_MARK, FOUND_CAT }
 
+private fun catsDoNotTouch(cats: Set<Cell>): Boolean = cats.none { a ->
+    cats.any { b -> a != b && abs(a.row - b.row) <= 1 && abs(a.column - b.column) <= 1 }
+}
+
 data class PuzzleLevel(
     val id: Int,
     val size: Int,
@@ -157,10 +161,6 @@ class GameEngine {
     companion object {
         const val STARTING_LIVES = 3
         const val STARTING_HINTS = 3
-
-        private fun catsDoNotTouch(cats: Set<Cell>): Boolean = cats.none { a ->
-            cats.any { b -> a != b && abs(a.row - b.row) <= 1 && abs(a.column - b.column) <= 1 }
-        }
 
         fun sampleLevel(): PuzzleLevel {
             val size = 6
