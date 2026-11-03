@@ -14,7 +14,20 @@ data class PlayerProgress(
     val highestUnlockedLevel: Int = 1,
     val completedLevels: Set<Int> = emptySet(),
     val totalScore: Int = 0
-)
+) {
+    fun completeLevel(levelId: Int, earnedScore: Int): PlayerProgress {
+        require(levelId > 0)
+        require(earnedScore >= 0)
+        if (levelId in completedLevels) return this
+        return copy(
+            highestUnlockedLevel = maxOf(highestUnlockedLevel, (levelId + 1).coerceAtMost(30)),
+            completedLevels = completedLevels + levelId,
+            totalScore = totalScore + earnedScore
+        )
+    }
+
+    fun isUnlocked(levelId: Int): Boolean = levelId in 1..highestUnlockedLevel
+}
 
 class PlayerProgressStore(context: Context) {
     private val dataStore = context.applicationContext.playerProgressDataStore
@@ -30,16 +43,16 @@ class PlayerProgressStore(context: Context) {
 
     suspend fun completeLevel(levelId: Int, earnedScore: Int) {
         dataStore.edit { preferences ->
-            val completed = preferences[COMPLETED_LEVELS].orEmpty().toMutableSet()
-            val firstCompletion = completed.add(levelId.toString())
-            preferences[COMPLETED_LEVELS] = completed
-            preferences[HIGHEST_UNLOCKED] = maxOf(
-                preferences[HIGHEST_UNLOCKED] ?: 1,
-                (levelId + 1).coerceAtMost(30)
+            val current = PlayerProgress(
+                highestUnlockedLevel = preferences[HIGHEST_UNLOCKED] ?: 1,
+                completedLevels = preferences[COMPLETED_LEVELS].orEmpty()
+                    .mapNotNull(String::toIntOrNull).toSet(),
+                totalScore = preferences[TOTAL_SCORE] ?: 0
             )
-            if (firstCompletion) {
-                preferences[TOTAL_SCORE] = (preferences[TOTAL_SCORE] ?: 0) + earnedScore
-            }
+            val updated = current.completeLevel(levelId, earnedScore)
+            preferences[COMPLETED_LEVELS] = updated.completedLevels.map(Int::toString).toSet()
+            preferences[HIGHEST_UNLOCKED] = updated.highestUnlockedLevel
+            preferences[TOTAL_SCORE] = updated.totalScore
         }
     }
 
