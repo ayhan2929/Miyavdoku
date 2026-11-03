@@ -22,7 +22,13 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     init {
         viewModelScope.launch {
             progressStore.progress.collect { progress ->
-                _uiState.update { it.copy(progress = progress) }
+                _uiState.update { current ->
+                    val restoredLevel = LevelCatalog.level(progress.lastPlayedLevel)
+                    if (current.progress == PlayerProgress() && current.game.level.id == 1 && restoredLevel.id != 1) {
+                        current.copy(game = engine.newGame(restoredLevel), progress = progress,
+                            message = "Kaldığın bölüm yeniden açıldı. İyi eğlenceler!")
+                    } else current.copy(progress = progress)
+                }
             }
         }
     }
@@ -74,6 +80,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     fun selectLevel(levelId: Int) {
         val selected = LevelCatalog.levels.firstOrNull { it.id == levelId } ?: return
         if (!_uiState.value.progress.isUnlocked(levelId)) return
+        viewModelScope.launch { progressStore.setLastPlayedLevel(levelId) }
         _uiState.update { GameUiState(engine.newGame(selected), message = "${selected.title} başladı. İyi eğlenceler!") }
     }
 
@@ -83,7 +90,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             else {
                 val next = LevelCatalog.nextAfter(current.game.level.id)
                 if (next == null) current.copy(message = "Tebrikler! Tüm mevcut bölümleri tamamladın.")
-                else GameUiState(engine.newGame(next), message = "Yeni bölüm başladı. İyi eğlenceler!")
+                else {
+                    viewModelScope.launch { progressStore.setLastPlayedLevel(next.id) }
+                    GameUiState(engine.newGame(next), message = "Yeni bölüm başladı. İyi eğlenceler!")
+                }
             }
         }
     }
