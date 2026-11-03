@@ -94,4 +94,16 @@ class GameEngineTest {
         assertEquals(MoveError.OUT_OF_BOUNDS, result.error)
         assertEquals(state, result.state)
     }
+    @Test fun catalogContainsThirtyValidLevels() {
+        assertEquals(30, LevelCatalog.levels.size)
+        LevelCatalog.levels.forEach { assertTrue(engine.isValidSolution(it)) }
+    }
+
+    @Test fun everyCatalogLevelHasSixCatsAndSixRegions() {
+        LevelCatalog.levels.forEach { level ->
+            assertEquals(6, level.catCells.size)
+            assertEquals(6, level.catCells.map(level::regionAt).toSet().size)
+        }
+    }
+
 }
