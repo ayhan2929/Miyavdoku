@@ -1,33 +1,29 @@
 # MiyavDoku
 
-Android için renkli, kedi temalı 9×9 blok bulmaca oyunu.
+Android için renkli, kedi temalı mantık ve gizli kedi bulma oyunu.
+
+## Oyun mantığı
+- Her bölüm renk bölgelerine ayrılmış kare bir tahtadan oluşur.
+- Her satırda tam bir kedi bulunur.
+- Her sütunda tam bir kedi bulunur.
+- Her renkte tam bir kedi bulunur.
+- Kediler yatay, dikey veya çapraz komşu hücrelerde bulunamaz.
+- Hücreye dokunarak boş olduğuna dair kalem işareti koyup kaldırabilirsin.
+- Bir hücreyi kedi olarak doğrulamak can kullanır; yanlış tahmin bir can götürür.
+- Oyuncu üç canla başlar. Tüm kediler bulunursa bölüm kazanılır; canlar biterse bölüm kaybedilir.
 
 ## Teknik kararlar
 - Kotlin ve Jetpack Compose
-- Oyun kuralları için Android'den bağımsız saf Kotlin
+- Android'den bağımsız saf Kotlin oyun motoru
 - Değişmez (immutable) oyun durumu
-- Jetpack Compose ekranında oyun durumu yönetimi
-- JUnit ile oyun motoru birim testleri
-- Room ve DataStore sonraki veri katmanı aşamasında eklenecek
+- Seviye tanımları ile oyun kurallarının ayrılması
+- JUnit birim testleri
+- Room ve DataStore ilerleyen aşamada kalıcı ilerleme ve ayarlar için eklenecek
 
-## Oyun kuralları
-- 9×9 oyun tahtası
-- Her elde birbirinden farklı 3 şekil
-- Şekiller tahtadaki boş hücrelere yerleştirilir
-- Tamamlanan satırlar, sütunlar ve 3×3 bölgeler temizlenir
-- Her hamlede şekil hücreleri kadar temel puan kazanılır
-- Temizlenen hücreler ve tamamlanan gruplar ek puan kazandırır
-- Arka arkaya temizleme hamleleri kombo bonusu verir
-- Eldeki üç şekil kullanıldığında yeni üç şekil dağıtılır
-- Hiçbir eldeki şekil tahtaya yerleşemiyorsa oyun sona erer
-- En iyi puan yeni oyun başlatıldığında korunur
-
-## Oyun motoru
-Motor `app/src/main/java/com/miyavdoku/domain/GameEngine.kt` dosyasındadır.
-Android veya Compose bağımlılığı yoktur. Hamleler yeni bir `GameState` üretir; geçersiz hamleler mevcut durumu değiştirmez.
-
-## Testler
-`app/src/test/java/com/miyavdoku/domain/GameEngineTest.kt` dosyasında tahta sınırları, geçersiz hamleler, satır ve 3×3 temizleme, şekil tüketimi, yeni şekil dağıtımı ve oyun sonu durumları için testler bulunur.
+## Kod yapısı
+- Oyun motoru: `app/src/main/java/com/miyavdoku/domain/GameEngine.kt`
+- Motor testleri: `app/src/test/java/com/miyavdoku/domain/GameEngineTest.kt`
+- İlk örnek bölüm özgün olarak oluşturulmuştur; üçüncü taraf kaynak kodu, görsel veya bölüm verisi kullanılmaz.
 
 ## Geliştirme durumu
-Oyun motorunun ilk kural seti ve ekran bağlantısı GitHub'a eklendi. Android derlemesi ve otomatik test çalıştırması henüz doğrulanmadı.
+Pawdoku tarzı gizli kedi bulma mekaniğine geçiş yapıldı. Android derlemesi ve otomatik test çalıştırması henüz doğrulanmadı.
