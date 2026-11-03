@@ -128,8 +128,7 @@ resource_file.write_text(resources, encoding="utf-8")
 # Oyun modları arasında reklam çağrısı yapılmasını da engelle.
 hooks_file = game_dir / "hooks.js"
 hooks = hooks_file.read_text(encoding="utf-8")
-hooks = re.sub(r'^\\s*gradle\\.showInter\\(\\);\\s*
-, '', hooks, flags=re.MULTILINE)
+hooks = hooks.replace("gradle.showInter();", "// Reklamlar kapalı.")
 hooks_file.write_text(hooks, encoding="utf-8")
 
 print("Türkçe yerelleştirme uygulandı: 26 oyun metni ve reklam kaldırma, Android sistem metinleri ve gizlilik bildirimi.")
