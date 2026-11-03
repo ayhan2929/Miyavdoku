@@ -35,7 +35,7 @@ object LevelGenerator {
                 cats.forEach { cell -> regions[cell.row * size + cell.column] = cell.row }
                 val immutableRegions = regions.toList()
 
-                if (immutableRegions in layouts) return@repeat
+                if (immutableRegions in layouts) continue
 
                 val candidate = PuzzleLevel(
                     id = id,
