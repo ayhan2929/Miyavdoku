@@ -15,6 +15,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -44,6 +47,42 @@ private val regionPalette = listOf(Color(0xFFFFDCE8), Color(0xFFDCEBFF), Color(0
 private fun MiyavDokuScreen(viewModel: GameViewModel) {
     val ui by viewModel.uiState.collectAsStateWithLifecycle()
     val game = ui.game
+    var showLevelPicker by remember { mutableStateOf(false) }
+    if (showLevelPicker) {
+        AlertDialog(
+            onDismissRequest = { showLevelPicker = false },
+            title = { Text("BÖLÜM SEÇ", color = purple, fontWeight = FontWeight.ExtraBold) },
+            text = {
+                Column(Modifier.heightIn(max = 440.dp).verticalScroll(rememberScrollState())) {
+                    PuzzleDifficulty.entries.forEach { tier ->
+                        Text(tier.label.uppercase(), color = ink, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
+                        val tierLevels = LevelCatalog.levels.filter { LevelCatalog.difficulty(it.id).tier == tier }
+                        tierLevels.chunked(5).forEach { rowLevels ->
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                                rowLevels.forEach { level ->
+                                    val current = level.id == game.level.id
+                                    Button(
+                                        onClick = {
+                                            viewModel.selectLevel(level.id)
+                                            showLevelPicker = false
+                                        },
+                                        modifier = Modifier.weight(1f),
+                                        contentPadding = PaddingValues(vertical = 4.dp, horizontal = 2.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = if (current) purple else Color(0xFFEDE5FA))
+                                    ) {
+                                        Text(level.id.toString(), color = if (current) Color.White else ink, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                                repeat(5 - rowLevels.size) { Spacer(Modifier.weight(1f)) }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showLevelPicker = false }) { Text("KAPAT") } },
+            containerColor = paper
+        )
+    }
     Surface(Modifier.fillMaxSize(), color = paper) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -70,6 +109,10 @@ private fun MiyavDokuScreen(viewModel: GameViewModel) {
                 Spacer(Modifier.width(8.dp))
                 Surface(color = Color(0xFFFFE4EA), shape = RoundedCornerShape(16.dp)) {
                     Text("♥ ".repeat(game.lives).trim(), modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp), color = Color(0xFFE65E80), fontWeight = FontWeight.Bold)
+                }
+                Spacer(Modifier.width(6.dp))
+                TextButton(onClick = { showLevelPicker = true }) {
+                    Text("BÖLÜMLER", color = purple, fontWeight = FontWeight.ExtraBold, fontSize = 10.sp)
                 }
             }
             Spacer(Modifier.height(14.dp))
