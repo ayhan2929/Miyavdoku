@@ -44,4 +44,15 @@ class PlayerProgressTest {
         val progress = PlayerProgress(highestUnlockedLevel = 30).completeLevel(30, 1000)
         assertEquals(30, progress.highestUnlockedLevel)
     }
+    @Test
+    fun lastPlayedLevelCanBeRestoredWhenUnlocked() {
+        val progress = PlayerProgress(highestUnlockedLevel = 6).withLastPlayedLevel(4)
+        assertEquals(4, progress.lastPlayedLevel)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun lockedLevelCannotBecomeLastPlayedLevel() {
+        PlayerProgress(highestUnlockedLevel = 2).withLastPlayedLevel(3)
+    }
+
 }
