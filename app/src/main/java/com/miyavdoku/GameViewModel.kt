@@ -73,7 +73,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     fun selectLevel(levelId: Int) {
         val selected = LevelCatalog.levels.firstOrNull { it.id == levelId } ?: return
-        if (levelId > _uiState.value.progress.highestUnlockedLevel) return
+        if (!_uiState.value.progress.isUnlocked(levelId)) return
         _uiState.update { GameUiState(engine.newGame(selected), message = "${selected.title} başladı. İyi eğlenceler!") }
     }
 
