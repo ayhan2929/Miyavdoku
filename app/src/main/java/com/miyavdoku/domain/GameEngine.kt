@@ -126,7 +126,7 @@ class GameEngine {
             (0 until state.level.size).asSequence().map { column -> Cell(row, column) }
         }.firstOrNull { cell ->
             state.markAt(cell) == CellMark.UNKNOWN &&
-                (found.any { it.row == cell.row || it.column == cell.column ||
+                (cell !in state.level.catCells || found.any { it.row == cell.row || it.column == cell.column ||
                     state.level.regionAt(it) == state.level.regionAt(cell) ||
                     (abs(it.row - cell.row) <= 1 && abs(it.column - cell.column) <= 1) })
         } ?: return MoveResult(state, MoveError.NO_HINT_AVAILABLE)
