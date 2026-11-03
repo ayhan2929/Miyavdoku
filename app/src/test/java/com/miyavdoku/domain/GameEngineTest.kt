@@ -149,4 +149,17 @@ class GameEngineTest {
         assertEquals(first.map { it.catCells }, second.map { it.catCells })
     }
 
+    @Test fun wrongGuessIsMarkedSoItCannotCostAnotherLife() {
+        val state = engine.newGame(level)
+        val wrong = (0 until level.size).flatMap { row ->
+            (0 until level.size).map { column -> Cell(row, column) }
+        }.first { it !in level.catCells }
+        val first = engine.revealCat(state, wrong)
+        assertEquals(CellMark.EMPTY_MARK, first.state.markAt(wrong))
+        val second = engine.revealCat(first.state, wrong)
+        assertEquals(2, second.state.lives)
+        assertEquals(first.state, second.state)
+        assertEquals(MoveError.ALREADY_MARKED, second.error)
+    }
+
 }
