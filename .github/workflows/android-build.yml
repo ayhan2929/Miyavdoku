@@ -1,8 +1,8 @@
 name: Meyve Kesme Android Build
-
-on:
+'on':
   push:
-    branches: [ main ]
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -10,16 +10,16 @@ permissions:
 
 jobs:
   build:
+    name: Android test and APK build
     runs-on: ubuntu-latest
-    env:
-      ANDROID_HOME: /usr/local/lib/android/sdk
-      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Extract game project
+        shell: bash
         run: |
+          set -euo pipefail
           unzip -o MeyveKesme_MiyavDoku_GitHub_Yukleme.zip
           test -f MeyveKesme/gradlew
           test -f MeyveKesme/app/build.gradle
@@ -30,14 +30,10 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Accept Android SDK licenses
-        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses
-
-      - name: Install Android SDK packages
-        run: "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-35" "build-tools;35.0.1"
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.1'
 
       - name: Run unit tests
         working-directory: MeyveKesme
@@ -48,7 +44,6 @@ jobs:
         run: ./gradlew assembleDebug --stacktrace
 
       - name: Upload APK
-        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: meyve-kesme-debug-apk
