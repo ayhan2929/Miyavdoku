@@ -64,10 +64,10 @@ class GameEngineTest {
 
     @Test fun thirdWrongGuessEndsGame() {
         var state = engine.newGame(level)
-        val wrong = (0 until level.size).flatMap { r ->
-            (0 until level.size).map { c -> Cell(r, c) }
-        }.first { it !in level.catCells }
-        repeat(3) { state = engine.revealCat(state, wrong).state }
+        val wrongCells = (0 until level.size).flatMap { row ->
+            (0 until level.size).map { column -> Cell(row, column) }
+        }.filter { it !in level.catCells }.take(3)
+        wrongCells.forEach { cell -> state = engine.revealCat(state, cell).state }
         assertEquals(0, state.lives)
         assertTrue(state.isLost)
     }
