@@ -98,31 +98,35 @@ privacy = """<br><br>
 # Reklamları tamamen devre dışı bırak ve banner alanını yerleşimden kaldır.
 layout_file = root / "app/src/main/res/layout/activity_main.xml"
 layout = layout_file.read_text(encoding="utf-8")
-layout = re.sub(
-    r'\\s*<com\\.google\\.android\\.gms\\.ads\\.AdView\\b.*?</com\\.google\\.android\\.gms\\.ads\\.AdView>',
+layout, removed_banner = re.subn(
+    r'\s*<com\.google\.android\.gms\.ads\.AdView\b.*?</com\.google\.android\.gms\.ads\.AdView>',
     '',
     layout,
     flags=re.DOTALL
 )
+if removed_banner != 1:
+    raise RuntimeError(f"Banner görünümü bulunamadı veya birden fazla bulundu: {removed_banner}")
 layout_file.write_text(layout, encoding="utf-8")
 
-# Reklam SDK'sının başlatılmasını ve reklam kimliği iznini kaldır.
+# Reklam kimliği iznini ve AdMob başlatma meta verilerini kaldır.
 manifest_file = root / "app/src/main/AndroidManifest.xml"
 manifest = manifest_file.read_text(encoding="utf-8")
-manifest = re.sub(r'\\s*<uses-permission android:name="com\\.google\\.android\\.gms\\.permission\\.AD_ID"\\s*/>', '', manifest)
-manifest = re.sub(r'\\s*<meta-data\\s+android:name="com\\.google\\.android\\.gms\\.ads\\.DELAY_APP_MEASUREMENT_INIT".*?/>', '', manifest, flags=re.DOTALL)
-manifest = re.sub(r'\\s*<meta-data\\s+android:name="com\\.google\\.android\\.gms\\.ads\\.APPLICATION_ID".*?/>', '', manifest, flags=re.DOTALL)
+manifest = re.sub(r'\s*<uses-permission android:name="com\.google\.android\.gms\.permission\.AD_ID"\s*/>', '', manifest)
+manifest = re.sub(r'\s*<meta-data\s+android:name="com\.google\.android\.gms\.ads\.DELAY_APP_MEASUREMENT_INIT".*?/>', '', manifest, flags=re.DOTALL)
+manifest = re.sub(r'\s*<meta-data\s+android:name="com\.google\.android\.gms\.ads\.APPLICATION_ID".*?/>', '', manifest, flags=re.DOTALL)
 manifest_file.write_text(manifest, encoding="utf-8")
 
 # Banner, geçiş ve ödüllü reklam anahtarlarını kapat.
 resource_file = root / "app/src/main/res/values/strings.xml"
 resources = resource_file.read_text(encoding="utf-8")
 for key in ("enable_banner", "enable_inter", "enable_reward"):
-    resources = re.sub(
-        r'(<bool\\s+name="' + key + r'">)\\s*true\\s*(</bool>)',
-        r'\\1false\\2',
+    resources, count = re.subn(
+        r'(<bool\s+name="' + key + r'">)\s*true\s*(</bool>)',
+        r'\1false\2',
         resources
     )
+    if count > 1:
+        raise RuntimeError("Birden fazla reklam ayarı bulundu: " + key)
 resource_file.write_text(resources, encoding="utf-8")
 
 # Oyun modları arasında reklam çağrısı yapılmasını da engelle.
@@ -135,9 +139,9 @@ hooks_file.write_text(hooks, encoding="utf-8")
 ad_java = root / "app/src/main/java/com/company/game/UtilsAdmob.java"
 ad_code = ad_java.read_text(encoding="utf-8")
 ad_code = ad_code.replace(
-    "AdView banner = activity.findViewById(R.id.adView);\\n                    banner.setVisibility(View.GONE);",
-    "AdView banner = activity.findViewById(R.id.adView);\\n                    if (banner != null) banner.setVisibility(View.GONE);"
+    "AdView banner = activity.findViewById(R.id.adView);\n                    banner.setVisibility(View.GONE);",
+    "AdView banner = activity.findViewById(R.id.adView);\n                    if (banner != null) banner.setVisibility(View.GONE);"
 )
 ad_java.write_text(ad_code, encoding="utf-8")
 
-print("Türkçe yerelleştirme uygulandı: 26 oyun metni ve reklam kaldırma, Android sistem metinleri ve gizlilik bildirimi.")
+print("Türkçe yerelleştirme uygulandı; banner görünümü ve reklam gösterimleri kaldırıldı.")
