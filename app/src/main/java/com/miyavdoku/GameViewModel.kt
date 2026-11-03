@@ -111,6 +111,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 MoveError.NO_HINTS -> "İpucu hakkın kalmadı."
                 MoveError.NO_HINT_AVAILABLE -> "Şu anda kullanılabilir ipucu yok."
                 MoveError.ALREADY_FOUND -> "Bu kediyi zaten buldun."
+                MoveError.ALREADY_MARKED -> "Bu hücre daha önce boş olarak doğrulandı."
                 MoveError.GAME_FINISHED -> "Bu bölüm tamamlandı."
                 else -> "Bu hücrede işlem yapılamıyor."
             }
