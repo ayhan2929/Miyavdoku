@@ -1,284 +1,167 @@
 package com.miyavdoku.domain
 
-import kotlin.random.Random
-
+/**
+ * Pawdoku-inspired logic puzzle engine.
+ * A level has one hidden cat in every row, column and color region.
+ * Cats may not touch, including diagonally.
+ */
 data class Cell(val row: Int, val column: Int)
 
-data class Piece(
-    val id: String,
-    val cells: List<Cell>
+enum class CellMark { UNKNOWN, EMPTY_MARK, FOUND_CAT }
+
+data class PuzzleLevel(
+    val id: Int,
+    val size: Int,
+    val regions: List<Int>,
+    val catCells: Set<Cell>,
+    val title: String = "Seviye $id"
 ) {
     init {
-        require(id.isNotBlank()) { "Piece id cannot be blank." }
-        require(cells.isNotEmpty()) { "A piece must contain at least one cell." }
-        require(cells.all { it.row >= 0 && it.column >= 0 }) {
-            "Piece coordinates cannot be negative."
+        require(size >= 4)
+        require(regions.size == size * size)
+        require(catCells.size == size)
+        require(catCells.all { it.row in 0 until size && it.column in 0 until size })
+        require(isValidSolution())
+    }
+
+    fun regionAt(cell: Cell): Int = regions[cell.row * size + cell.column]
+
+    private fun isValidSolution(): Boolean {
+        if (catCells.map { it.row }.toSet().size != size) return false
+        if (catCells.map { it.column }.toSet().size != size) return false
+        if (catCells.map(::regionAt).toSet().size != size) return false
+        return catCells.none { a ->
+            catCells.any { b ->
+                a != b && kotlin.math.abs(a.row - b.row) <= 1 &&
+                    kotlin.math.abs(a.column - b.column) <= 1
+            }
         }
-        require(cells.distinct().size == cells.size) { "Piece cells must be unique." }
     }
-
-    val height: Int = cells.maxOf { it.row } + 1
-    val width: Int = cells.maxOf { it.column } + 1
-}
-
-data class Board(
-    val cells: List<Boolean> = List(BOARD_CELL_COUNT) { false }
-) {
-    init {
-        require(cells.size == BOARD_CELL_COUNT) {
-            "A MiyavDoku board must contain exactly 81 cells."
-        }
-    }
-
-    operator fun get(row: Int, column: Int): Boolean {
-        require(row in 0 until BOARD_SIZE && column in 0 until BOARD_SIZE)
-        return cells[index(row, column)]
-    }
-
-    val occupiedCount: Int
-        get() = cells.count { it }
-
-    fun withOccupied(positions: Collection<Cell>): Board {
-        val updated = cells.toMutableList()
-        positions.forEach { position ->
-            require(position.row in 0 until BOARD_SIZE)
-            require(position.column in 0 until BOARD_SIZE)
-            updated[index(position.row, position.column)] = true
-        }
-        return copy(cells = updated)
-    }
-
-    companion object {
-        const val BOARD_SIZE = 9
-        const val BOARD_CELL_COUNT = BOARD_SIZE * BOARD_SIZE
-
-        private fun index(row: Int, column: Int) = row * BOARD_SIZE + column
-    }
-}
-
-data class ClearSummary(
-    val rows: Int = 0,
-    val columns: Int = 0,
-    val boxes: Int = 0,
-    val clearedCells: Int = 0
-) {
-    val completedGroups: Int
-        get() = rows + columns + boxes
-
-    val hasClear: Boolean
-        get() = clearedCells > 0
 }
 
 data class GameState(
-    val board: Board = Board(),
-    val availablePieces: List<Piece> = emptyList(),
+    val level: PuzzleLevel,
+    val marks: List<CellMark> = List(level.size * level.size) { CellMark.UNKNOWN },
+    val lives: Int = STARTING_LIVES,
     val score: Int = 0,
-    val bestScore: Int = 0,
-    val movesPlayed: Int = 0,
-    val combo: Int = 0,
-    val isGameOver: Boolean = false
+    val isWon: Boolean = false,
+    val isLost: Boolean = false
 ) {
     init {
+        require(marks.size == level.size * level.size)
+        require(lives in 0..STARTING_LIVES)
         require(score >= 0)
-        require(bestScore >= score)
-        require(movesPlayed >= 0)
-        require(combo >= 0)
-        require(availablePieces.map { it.id }.distinct().size == availablePieces.size)
+        require(!(isWon && isLost))
+    }
+
+    val foundCats: Int get() = marks.count { it == CellMark.FOUND_CAT }
+    val totalCats: Int get() = level.size
+    val isFinished: Boolean get() = isWon || isLost
+
+    fun markAt(cell: Cell): CellMark {
+        require(cell.row in 0 until level.size && cell.column in 0 until level.size)
+        return marks[cell.row * level.size + cell.column]
     }
 }
 
-enum class MoveError {
-    GAME_OVER,
-    PIECE_NOT_AVAILABLE,
-    INVALID_POSITION
-}
+enum class MoveError { GAME_FINISHED, OUT_OF_BOUNDS, ALREADY_FOUND }
 
 data class MoveResult(
     val state: GameState,
     val error: MoveError? = null,
-    val clearSummary: ClearSummary = ClearSummary(),
-    val pointsEarned: Int = 0
+    val foundCat: Boolean = false
 ) {
-    val accepted: Boolean
-        get() = error == null
+    val accepted: Boolean get() = error == null
 }
 
-/**
- * Pure Kotlin game rules. No Android, Compose, database or UI dependencies.
- *
- * A turn consumes exactly one tray piece. When the tray becomes empty,
- * a new set is generated. The game ends when no remaining piece can fit.
- */
-class GameEngine(
-    private val random: Random = Random.Default
-) {
-    fun newGame(bestScore: Int = 0): GameState {
-        require(bestScore >= 0)
-        val pieces = drawPieces()
-        return GameState(
-            availablePieces = pieces,
-            bestScore = bestScore
-        )
+class GameEngine {
+    fun newGame(level: PuzzleLevel = sampleLevel()): GameState = GameState(level = level)
+
+    /** A normal tap toggles a pencil mark, without consuming a life. */
+    fun toggleMark(state: GameState, cell: Cell): MoveResult {
+        if (state.isFinished) return MoveResult(state, MoveError.GAME_FINISHED)
+        if (!isInside(state.level, cell)) return MoveResult(state, MoveError.OUT_OF_BOUNDS)
+        if (state.markAt(cell) == CellMark.FOUND_CAT) {
+            return MoveResult(state, MoveError.ALREADY_FOUND)
+        }
+        val updated = state.marks.toMutableList()
+        val index = index(state.level, cell)
+        updated[index] = if (updated[index] == CellMark.EMPTY_MARK) {
+            CellMark.UNKNOWN
+        } else {
+            CellMark.EMPTY_MARK
+        }
+        return MoveResult(state.copy(marks = updated))
     }
 
-    fun canPlace(board: Board, piece: Piece, origin: Cell): Boolean {
-        if (origin.row < 0 || origin.column < 0) return false
-
-        return piece.cells.all { cell ->
-            val row = origin.row + cell.row
-            val column = origin.column + cell.column
-            row in 0 until Board.BOARD_SIZE &&
-                column in 0 until Board.BOARD_SIZE &&
-                !board[row, column]
-        }
-    }
-
-    fun placePiece(
-        state: GameState,
-        pieceId: String,
-        origin: Cell
-    ): MoveResult {
-        if (state.isGameOver) return MoveResult(state, MoveError.GAME_OVER)
-
-        val piece = state.availablePieces.firstOrNull { it.id == pieceId }
-            ?: return MoveResult(state, MoveError.PIECE_NOT_AVAILABLE)
-
-        if (!canPlace(state.board, piece, origin)) {
-            return MoveResult(state, MoveError.INVALID_POSITION)
+    /** Explicitly checks the selected cell. A wrong guess costs one heart. */
+    fun revealCat(state: GameState, cell: Cell): MoveResult {
+        if (state.isFinished) return MoveResult(state, MoveError.GAME_FINISHED)
+        if (!isInside(state.level, cell)) return MoveResult(state, MoveError.OUT_OF_BOUNDS)
+        if (state.markAt(cell) == CellMark.FOUND_CAT) {
+            return MoveResult(state, MoveError.ALREADY_FOUND)
         }
 
-        val placedBoard = state.board.withOccupied(
-            piece.cells.map { Cell(origin.row + it.row, origin.column + it.column) }
-        )
-        val (clearedBoard, summary) = clearCompletedGroups(placedBoard)
+        if (cell !in state.level.catCells) {
+            val remainingLives = (state.lives - 1).coerceAtLeast(0)
+            return MoveResult(
+                state.copy(lives = remainingLives, isLost = remainingLives == 0)
+            )
+        }
 
-        val nextCombo = if (summary.hasClear) state.combo + 1 else 0
-        val earned = calculatePoints(piece, summary, nextCombo)
-        val nextScore = state.score + earned
-        val remainingPieces = state.availablePieces.filterNot { it.id == piece.id }
-
-        val nextPieces = if (remainingPieces.isEmpty()) drawPieces() else remainingPieces
-        val gameOver = !hasAnyMove(clearedBoard, nextPieces)
-
-        val nextState = state.copy(
-            board = clearedBoard,
-            availablePieces = nextPieces,
-            score = nextScore,
-            bestScore = maxOf(state.bestScore, nextScore),
-            movesPlayed = state.movesPlayed + 1,
-            combo = nextCombo,
-            isGameOver = gameOver
-        )
-
+        val updated = state.marks.toMutableList()
+        updated[index(state.level, cell)] = CellMark.FOUND_CAT
+        val found = updated.count { it == CellMark.FOUND_CAT }
+        val won = found == state.totalCats
         return MoveResult(
-            state = nextState,
-            clearSummary = summary,
-            pointsEarned = earned
+            state.copy(
+                marks = updated,
+                score = state.score + 100,
+                isWon = won
+            ),
+            foundCat = true
         )
     }
 
-    fun hasAnyMove(board: Board, pieces: List<Piece>): Boolean {
-        if (pieces.isEmpty()) return false
-
-        return pieces.any { piece ->
-            if (piece.height > Board.BOARD_SIZE || piece.width > Board.BOARD_SIZE) {
-                false
-            } else {
-                (0..Board.BOARD_SIZE - piece.height).any { row ->
-                    (0..Board.BOARD_SIZE - piece.width).any { column ->
-                        canPlace(board, piece, Cell(row, column))
-                    }
-                }
+    fun isValidSolution(level: PuzzleLevel): Boolean {
+        val cats = level.catCells
+        if (cats.size != level.size) return false
+        if (cats.map { it.row }.toSet().size != level.size) return false
+        if (cats.map { it.column }.toSet().size != level.size) return false
+        if (cats.map(level::regionAt).toSet().size != level.size) return false
+        return cats.none { a ->
+            cats.any { b ->
+                a != b && kotlin.math.abs(a.row - b.row) <= 1 &&
+                    kotlin.math.abs(a.column - b.column) <= 1
             }
         }
     }
 
-    private fun clearCompletedGroups(board: Board): Pair<Board, ClearSummary> {
-        val fullRows = (0 until Board.BOARD_SIZE).filter { row ->
-            (0 until Board.BOARD_SIZE).all { column -> board[row, column] }
-        }
-        val fullColumns = (0 until Board.BOARD_SIZE).filter { column ->
-            (0 until Board.BOARD_SIZE).all { row -> board[row, column] }
-        }
-        val fullBoxes = (0 until 3).flatMap { boxRow ->
-            (0 until 3).mapNotNull { boxColumn ->
-                val cells = (0 until 3).flatMap { localRow ->
-                    (0 until 3).map { localColumn ->
-                        Cell(boxRow * 3 + localRow, boxColumn * 3 + localColumn)
-                    }
-                }
-                cells.takeIf { group ->
-                    group.all { board[it.row, it.column] }
-                }
-            }
-        }
+    private fun isInside(level: PuzzleLevel, cell: Cell) =
+        cell.row in 0 until level.size && cell.column in 0 until level.size
 
-        val cellsToClear = buildSet {
-            fullRows.forEach { row ->
-                (0 until Board.BOARD_SIZE).forEach { column ->
-                    add(Cell(row, column))
-                }
-            }
-            fullColumns.forEach { column ->
-                (0 until Board.BOARD_SIZE).forEach { row ->
-                    add(Cell(row, column))
-                }
-            }
-            fullBoxes.flatten().forEach(::add)
-        }
-
-        val updated = board.cells.toMutableList()
-        cellsToClear.forEach { cell ->
-            updated[cell.row * Board.BOARD_SIZE + cell.column] = false
-        }
-
-        return Board(updated) to ClearSummary(
-            rows = fullRows.size,
-            columns = fullColumns.size,
-            boxes = fullBoxes.size,
-            clearedCells = cellsToClear.size
-        )
-    }
-
-    private fun calculatePoints(
-        piece: Piece,
-        summary: ClearSummary,
-        combo: Int
-    ): Int {
-        val placementPoints = piece.cells.size
-        val clearPoints = summary.clearedCells * 2
-        val groupBonus = summary.completedGroups * 5
-        val comboBonus = if (summary.hasClear && combo > 1) (combo - 1) * 5 else 0
-        return placementPoints + clearPoints + groupBonus + comboBonus
-    }
-
-    private fun drawPieces(): List<Piece> =
-        PIECE_CATALOG.shuffled(random).take(PIECES_PER_HAND)
+    private fun index(level: PuzzleLevel, cell: Cell) = cell.row * level.size + cell.column
 
     companion object {
-        const val PIECES_PER_HAND = 3
+        const val STARTING_LIVES = 3
 
-        val PIECE_CATALOG: List<Piece> = listOf(
-            Piece("single", listOf(Cell(0, 0))),
-            Piece("domino", listOf(Cell(0, 0), Cell(0, 1))),
-            Piece("line-3", listOf(Cell(0, 0), Cell(0, 1), Cell(0, 2))),
-            Piece("line-4", listOf(Cell(0, 0), Cell(0, 1), Cell(0, 2), Cell(0, 3))),
-            Piece("corner-3", listOf(Cell(0, 0), Cell(1, 0), Cell(1, 1))),
-            Piece("square-2", listOf(
-                Cell(0, 0), Cell(0, 1), Cell(1, 0), Cell(1, 1)
-            )),
-            Piece("t-4", listOf(
-                Cell(0, 0), Cell(0, 1), Cell(0, 2), Cell(1, 1)
-            )),
-            Piece("l-4", listOf(
-                Cell(0, 0), Cell(1, 0), Cell(2, 0), Cell(2, 1)
-            )),
-            Piece("plus-5", listOf(
-                Cell(0, 1), Cell(1, 0), Cell(1, 1), Cell(1, 2), Cell(2, 1)
-            ))
-        )
-
-        // Kept temporarily so the first screen remains compatible during migration.
-        val starterPieces: List<Piece> = PIECE_CATALOG.take(3)
+        /** Original sample puzzle; level data is separate from the rule engine. */
+        fun sampleLevel(): PuzzleLevel {
+            val size = 6
+            val solutionColumns = listOf(0, 3, 1, 4, 2, 5)
+            val cats = solutionColumns.mapIndexed { row, column -> Cell(row, column) }.toSet()
+            val regions = List(size * size) { index ->
+                val row = index / size
+                val column = index % size
+                (row + 2 * column) % size
+            }
+            return PuzzleLevel(
+                id = 1,
+                size = size,
+                regions = regions,
+                catCells = cats,
+                title = "İlk Miyav"
+            )
+        }
     }
 }
