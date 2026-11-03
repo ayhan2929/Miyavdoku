@@ -23,6 +23,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.semantics.Role
@@ -199,11 +203,25 @@ private fun MiyavDokuScreen(viewModel: GameViewModel) {
                                 val selectedCell = ui.selectedCell == cell
                                 val cellStateDescription = when (mark) {
                                     CellMark.EMPTY_MARK -> "Boş olduğu işaretlendi"
+                                    CellMark.WRONG_GUESS -> "Yanlış tahmin"
                                     CellMark.FOUND_CAT -> "Kedi bulundu"
                                     CellMark.UNKNOWN -> "Henüz kontrol edilmedi"
                                 }
-                                val bg = regionPalette[game.level.regionAt(cell) % regionPalette.size]
-                                Box(Modifier.weight(1f).aspectRatio(1f).background(bg, RoundedCornerShape(9.dp))
+                                val bg = if (mark == CellMark.WRONG_GUESS) Color(0xFFFF7777)
+                                    else regionPalette[game.level.regionAt(cell) % regionPalette.size]
+                                val wrongGuessScale = remember(cell) { Animatable(1f) }
+                                LaunchedEffect(mark) {
+                                    if (mark == CellMark.WRONG_GUESS) {
+                                        wrongGuessScale.snapTo(1f)
+                                        wrongGuessScale.animateTo(0.88f, animationSpec = tween(75))
+                                        wrongGuessScale.animateTo(1.06f, animationSpec = tween(90))
+                                        wrongGuessScale.animateTo(1f, animationSpec = tween(90))
+                                    }
+                                }
+                                Box(Modifier.weight(1f).aspectRatio(1f).graphicsLayer {
+                                    scaleX = wrongGuessScale.value
+                                    scaleY = wrongGuessScale.value
+                                }.background(bg, RoundedCornerShape(9.dp))
                                     .border(if (selectedCell) 3.dp else 1.dp, if (selectedCell) purple else Color.White.copy(alpha = .9f), RoundedCornerShape(9.dp))
                                     .semantics {
                                         contentDescription = "${row + 1}. satır, ${col + 1}. sütun"
@@ -211,12 +229,22 @@ private fun MiyavDokuScreen(viewModel: GameViewModel) {
                                         role = Role.Button
                                         selected = selectedCell
                                     }
-                                    .pointerInput(cell, game.isFinished) { detectTapGestures(onTap = { viewModel.tapCell(cell) }, onDoubleTap = { viewModel.doubleTapCell(cell) }) }, contentAlignment = Alignment.Center) {
+                                    .pointerInput(cell, game.isFinished) {
+                                        detectTapGestures(
+                                            onTap = { viewModel.tapCell(cell) },
+                                            onLongPress = { viewModel.longPressCell(cell) }
+                                        )
+                                    }, contentAlignment = Alignment.Center) {
                                     Text(when (mark) {
-                                        CellMark.EMPTY_MARK -> "×"
+                                        CellMark.EMPTY_MARK, CellMark.WRONG_GUESS -> "×"
                                         CellMark.FOUND_CAT -> "🐱"
                                         CellMark.UNKNOWN -> if (selectedCell) "•" else ""
-                                    }, color = if (mark == CellMark.EMPTY_MARK) Color(0xFF8D75A0) else ink, fontSize = if (mark == CellMark.FOUND_CAT) 23.sp else 21.sp, fontWeight = FontWeight.Bold)
+                                    }, color = when (mark) {
+                                        CellMark.WRONG_GUESS -> Color(0xFFB00020)
+                                        CellMark.FOUND_CAT -> Color.Black
+                                        CellMark.EMPTY_MARK -> Color(0xFF8D75A0)
+                                        CellMark.UNKNOWN -> ink
+                                    }, fontSize = if (mark == CellMark.FOUND_CAT) 23.sp else 21.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
