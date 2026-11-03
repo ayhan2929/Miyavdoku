@@ -62,7 +62,7 @@ private fun MiyavDokuScreen(viewModel: GameViewModel) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("BÖLÜM ${game.level.id}/30", color = ink, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
-                    Text(game.level.title, color = ink.copy(alpha = .65f), fontSize = 12.sp)
+                    Text("${game.level.title}  •  ${LevelCatalog.difficulty(game.level.id).tier.label}", color = ink.copy(alpha = .65f), fontSize = 12.sp)
                 }
                 Surface(color = Color.White, shape = RoundedCornerShape(16.dp)) {
                     Text("🐾  ${game.foundCats}/${game.totalCats}", modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp), color = purple, fontWeight = FontWeight.Bold)
