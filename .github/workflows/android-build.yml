@@ -24,6 +24,9 @@ jobs:
           test -f MeyveKesme/gradlew
           test -f MeyveKesme/app/build.gradle
 
+      - name: Apply Turkish localization
+        run: python3 localization/apply_turkish.py MeyveKesme
+
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
