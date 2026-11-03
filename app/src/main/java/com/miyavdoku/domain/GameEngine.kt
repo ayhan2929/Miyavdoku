@@ -93,6 +93,7 @@ class GameEngine {
         val error = validateCell(state, cell)
         if (error != null) return MoveResult(state, error)
         if (state.markAt(cell) == CellMark.FOUND_CAT) return MoveResult(state, MoveError.ALREADY_FOUND)
+        if (state.markAt(cell) == CellMark.WRONG_GUESS) return MoveResult(state, MoveError.ALREADY_MARKED)
         val marks = state.marks.toMutableList()
         marks[index(state.level, cell)] = CellMark.UNKNOWN
         return MoveResult(state.copy(marks = marks))
