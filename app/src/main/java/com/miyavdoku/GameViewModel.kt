@@ -1,6 +1,9 @@
 package com.miyavdoku
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
 import com.miyavdoku.domain.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -10,10 +13,19 @@ import kotlinx.coroutines.flow.update
 data class GameUiState(
     val game: GameState,
     val selectedCell: Cell? = null,
-    val message: String = "Gizli kedileri bulmak için ipuçlarını takip et!"
+    val message: String = "Gizli kedileri bulmak için ipuçlarını takip et!",
+    val progress: PlayerProgress = PlayerProgress()
 )
 
-class GameViewModel : ViewModel() {
+class GameViewModel(application: Application) : AndroidViewModel(application) {
+    private val progressStore = PlayerProgressStore(application)
+    init {
+        viewModelScope.launch {
+            progressStore.progress.collect { progress ->
+                _uiState.update { it.copy(progress = progress) }
+            }
+        }
+    }
     private val engine = GameEngine()
     private val _uiState = MutableStateFlow(GameUiState(engine.newGame(LevelCatalog.level(1))))
     val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
@@ -61,6 +73,7 @@ class GameViewModel : ViewModel() {
 
     fun selectLevel(levelId: Int) {
         val selected = LevelCatalog.levels.firstOrNull { it.id == levelId } ?: return
+        if (levelId > _uiState.value.progress.highestUnlockedLevel) return
         _uiState.update { GameUiState(engine.newGame(selected), message = "${selected.title} başladı. İyi eğlenceler!") }
     }
 
@@ -94,6 +107,9 @@ class GameViewModel : ViewModel() {
             return current.copy(message = message)
         }
         val game = result.state
+        if (game.isWon && !current.game.isWon) {
+            viewModelScope.launch { progressStore.completeLevel(game.level.id, game.score) }
+        }
         val message = when {
             game.isWon -> "MİYAV! Bölümü tamamladın!"
             game.isLost -> "Canların bitti. Yeniden deneyebilirsin."
