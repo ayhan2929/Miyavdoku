@@ -131,4 +131,22 @@ class GameEngineTest {
         }
     }
 
+    @Test fun everyGeneratedCatalogLevelHasExactlyOneSolution() {
+        LevelCatalog.levels.forEach { generated ->
+            assertEquals(1, PuzzleSolver.countSolutions(generated, limit = 2))
+        }
+    }
+
+    @Test fun generatedCatalogHasDistinctLayouts() {
+        val layouts = LevelCatalog.levels.map { it.regions }.toSet()
+        assertEquals(LevelCatalog.levels.size, layouts.size)
+    }
+
+    @Test fun generationIsDeterministicForSameSeed() {
+        val first = LevelGenerator.generateCatalog(count = 5, seed = 42)
+        val second = LevelGenerator.generateCatalog(count = 5, seed = 42)
+        assertEquals(first.map { it.regions }, second.map { it.regions })
+        assertEquals(first.map { it.catCells }, second.map { it.catCells })
+    }
+
 }
