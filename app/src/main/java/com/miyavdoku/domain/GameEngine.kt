@@ -64,7 +64,7 @@ data class GameState(
     }
 }
 
-enum class MoveError { GAME_FINISHED, OUT_OF_BOUNDS, ALREADY_FOUND, NO_HINTS, NO_HINT_AVAILABLE }
+enum class MoveError { GAME_FINISHED, OUT_OF_BOUNDS, ALREADY_FOUND, ALREADY_MARKED, NO_HINTS, NO_HINT_AVAILABLE }
 
 data class MoveResult(
     val state: GameState,
