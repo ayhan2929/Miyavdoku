@@ -3,7 +3,7 @@ package com.miyavdoku.domain
 import kotlin.math.abs
 
 data class Cell(val row: Int, val column: Int)
-enum class CellMark { UNKNOWN, EMPTY_MARK, FOUND_CAT }
+enum class CellMark { UNKNOWN, EMPTY_MARK, WRONG_GUESS, FOUND_CAT }
 
 private fun catsDoNotTouch(cats: Set<Cell>): Boolean = cats.none { a ->
     cats.any { b -> a != b && abs(a.row - b.row) <= 1 && abs(a.column - b.column) <= 1 }
@@ -82,6 +82,7 @@ class GameEngine {
         val error = validateCell(state, cell)
         if (error != null) return MoveResult(state, error)
         if (state.markAt(cell) == CellMark.FOUND_CAT) return MoveResult(state, MoveError.ALREADY_FOUND)
+        if (state.markAt(cell) == CellMark.WRONG_GUESS) return MoveResult(state, MoveError.ALREADY_MARKED)
         val marks = state.marks.toMutableList()
         val i = index(state.level, cell)
         marks[i] = if (marks[i] == CellMark.EMPTY_MARK) CellMark.UNKNOWN else CellMark.EMPTY_MARK
@@ -101,12 +102,12 @@ class GameEngine {
         val error = validateCell(state, cell)
         if (error != null) return MoveResult(state, error)
         if (state.markAt(cell) == CellMark.FOUND_CAT) return MoveResult(state, MoveError.ALREADY_FOUND)
-        if (state.markAt(cell) == CellMark.EMPTY_MARK) return MoveResult(state, MoveError.ALREADY_MARKED)
+        if (state.markAt(cell) == CellMark.EMPTY_MARK || state.markAt(cell) == CellMark.WRONG_GUESS) return MoveResult(state, MoveError.ALREADY_MARKED)
 
         if (cell !in state.level.catCells) {
             val lives = (state.lives - 1).coerceAtLeast(0)
             val marks = state.marks.toMutableList()
-            marks[index(state.level, cell)] = CellMark.EMPTY_MARK
+            marks[index(state.level, cell)] = CellMark.WRONG_GUESS
             return MoveResult(state.copy(marks = marks, lives = lives, isLost = lives == 0))
         }
 
