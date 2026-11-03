@@ -61,16 +61,27 @@ private fun MiyavDokuScreen(viewModel: GameViewModel) {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                                 rowLevels.forEach { level ->
                                     val current = level.id == game.level.id
+                                    val unlocked = level.id <= ui.progress.highestUnlockedLevel
+                                    val completed = level.id in ui.progress.completedLevels
                                     Button(
                                         onClick = {
                                             viewModel.selectLevel(level.id)
                                             showLevelPicker = false
                                         },
+                                        enabled = unlocked,
                                         modifier = Modifier.weight(1f),
                                         contentPadding = PaddingValues(vertical = 4.dp, horizontal = 2.dp),
                                         colors = ButtonDefaults.buttonColors(containerColor = if (current) purple else Color(0xFFEDE5FA))
                                     ) {
-                                        Text(level.id.toString(), color = if (current) Color.White else ink, fontWeight = FontWeight.Bold)
+                                        Text(
+                                            when {
+                                                completed -> "✓ ${level.id}"
+                                                !unlocked -> "🔒"
+                                                else -> level.id.toString()
+                                            },
+                                            color = if (current) Color.White else ink,
+                                            fontWeight = FontWeight.Bold
+                                        )
                                     }
                                 }
                                 repeat(5 - rowLevels.size) { Spacer(Modifier.weight(1f)) }
@@ -94,7 +105,7 @@ private fun MiyavDokuScreen(viewModel: GameViewModel) {
                 }
                 Spacer(Modifier.weight(1f))
                 Surface(color = Color(0xFFFFE8B6), shape = RoundedCornerShape(18.dp)) {
-                    Text("🪙 1.250  +", modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp), color = ink, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text("⭐  ${ui.progress.totalScore}", modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp), color = ink, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 }
             }
             Spacer(Modifier.height(16.dp))
@@ -102,6 +113,10 @@ private fun MiyavDokuScreen(viewModel: GameViewModel) {
                 Column(Modifier.weight(1f)) {
                     Text("BÖLÜM ${game.level.id}/30", color = ink, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
                     Text("${game.level.title}  •  ${LevelCatalog.difficulty(game.level.id).tier.label}", color = ink.copy(alpha = .65f), fontSize = 12.sp)
+                    Text(
+                        "Açık: ${ui.progress.highestUnlockedLevel}  •  Tamamlanan: ${ui.progress.completedLevels.size}",
+                        color = purple, fontSize = 10.sp, fontWeight = FontWeight.Bold
+                    )
                 }
                 Surface(color = Color.White, shape = RoundedCornerShape(16.dp)) {
                     Text("🐾  ${game.foundCats}/${game.totalCats}", modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp), color = purple, fontWeight = FontWeight.Bold)
