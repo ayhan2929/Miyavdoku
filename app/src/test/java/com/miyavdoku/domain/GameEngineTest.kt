@@ -155,7 +155,7 @@ class GameEngineTest {
             (0 until level.size).map { column -> Cell(row, column) }
         }.first { it !in level.catCells }
         val first = engine.revealCat(state, wrong)
-        assertEquals(CellMark.EMPTY_MARK, first.state.markAt(wrong))
+        assertEquals(CellMark.WRONG_GUESS, first.state.markAt(wrong))
         val second = engine.revealCat(first.state, wrong)
         assertEquals(2, second.state.lives)
         assertEquals(first.state, second.state)
