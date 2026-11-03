@@ -1,127 +1,97 @@
 package com.miyavdoku.domain
 
-import kotlin.random.Random
 import org.junit.Assert.*
 import org.junit.Test
 
 class GameEngineTest {
-    private val engine = GameEngine(Random(7))
+    private val engine = GameEngine()
+    private val level = GameEngine.sampleLevel()
 
-    @Test
-    fun newGameCreatesEmptyBoardAndThreeDistinctPieces() {
-        val state = engine.newGame()
-        assertEquals(0, state.board.occupiedCount)
-        assertEquals(3, state.availablePieces.size)
-        assertEquals(3, state.availablePieces.map { it.id }.distinct().size)
-        assertFalse(state.isGameOver)
+    @Test fun sampleLevelHasOneCatPerRowColumnAndColor() {
+        assertTrue(engine.isValidSolution(level))
+        assertEquals(level.size, level.catCells.map { it.row }.toSet().size)
+        assertEquals(level.size, level.catCells.map { it.column }.toSet().size)
+        assertEquals(level.size, level.catCells.map(level::regionAt).toSet().size)
     }
 
-    @Test
-    fun rejectsOutOfBoundsPlacementWithoutChangingState() {
-        val state = engine.newGame()
-        val piece = state.availablePieces.first()
-        val result = engine.placePiece(state, piece.id, Cell(9, 0))
-
-        assertFalse(result.accepted)
-        assertEquals(MoveError.INVALID_POSITION, result.error)
-        assertEquals(state, result.state)
-    }
-
-    @Test
-    fun rejectsPieceThatIsNotInTray() {
-        val state = engine.newGame()
-        val result = engine.placePiece(state, "unknown-piece", Cell(0, 0))
-
-        assertEquals(MoveError.PIECE_NOT_AVAILABLE, result.error)
-        assertEquals(state, result.state)
-    }
-
-    @Test
-    fun successfulMoveConsumesExactlyOnePieceAndIncreasesScore() {
-        val state = engine.newGame()
-        val piece = state.availablePieces.first()
-        val result = engine.placePiece(state, piece.id, Cell(0, 0))
-
-        assertTrue(result.accepted)
-        assertEquals(2, result.state.availablePieces.size)
-        assertEquals(1, result.state.movesPlayed)
-        assertEquals(piece.cells.size, result.pointsEarned)
-        assertEquals(piece.cells.size, result.state.score)
-    }
-
-    @Test
-    fun completingRowClearsIt() {
-        val cells = MutableList(81) { false }
-        for (column in 0..7) cells[column] = true
-        val board = Board(cells)
-        val single = GameEngine.PIECE_CATALOG.first { it.id == "single" }
-        val result = engine.placePiece(
-            GameState(board = board, availablePieces = listOf(single)),
-            single.id,
-            Cell(0, 8)
-        )
-
-        assertTrue(result.accepted)
-        assertEquals(1, result.clearSummary.rows)
-        assertEquals(9, result.clearSummary.clearedCells)
-        assertTrue((0..8).none { result.state.board[0, it] })
-    }
-
-    @Test
-    fun completingThreeByThreeBoxClearsIt() {
-        val cells = MutableList(81) { false }
-        for (row in 0..2) for (column in 0..1) {
-            cells[row * 9 + column] = true
-        }
-        for (row in 0..1) cells[row * 9 + 2] = true
-
-        val single = GameEngine.PIECE_CATALOG.first { it.id == "single" }
-        val result = engine.placePiece(
-            GameState(board = Board(cells), availablePieces = listOf(single)),
-            single.id,
-            Cell(2, 2)
-        )
-
-        assertEquals(1, result.clearSummary.boxes)
-        assertEquals(9, result.clearSummary.clearedCells)
-        for (row in 0..2) for (column in 0..2) {
-            assertFalse(result.state.board[row, column])
+    @Test fun catsNeverTouchEvenDiagonally() {
+        val cats = level.catCells.toList()
+        for (i in cats.indices) for (j in i + 1 until cats.size) {
+            assertTrue(kotlin.math.abs(cats[i].row - cats[j].row) > 1 ||
+                kotlin.math.abs(cats[i].column - cats[j].column) > 1)
         }
     }
 
-    @Test
-    fun fullBoardHasNoLegalPlacement() {
-        val fullBoard = Board(List(81) { true })
-        assertFalse(engine.hasAnyMove(fullBoard, GameEngine.PIECE_CATALOG))
+    @Test fun newGameStartsWithThreeLivesAndEmptyMarks() {
+        val state = engine.newGame(level)
+        assertEquals(3, state.lives)
+        assertEquals(0, state.foundCats)
+        assertTrue(state.marks.all { it == CellMark.UNKNOWN })
     }
 
-    @Test
-    fun completedMoveRefillsAnEmptyTrayWithThreeNewPieces() {
-        val single = GameEngine.PIECE_CATALOG.first { it.id == "single" }
-        val state = GameState(availablePieces = listOf(single))
-        val result = engine.placePiece(state, single.id, Cell(0, 0))
+    @Test fun pencilMarkTogglesWithoutLosingLife() {
+        val state = engine.newGame(level)
+        val cell = Cell(0, 1)
+        val marked = engine.toggleMark(state, cell).state
+        assertEquals(CellMark.EMPTY_MARK, marked.markAt(cell))
+        assertEquals(3, marked.lives)
+        val cleared = engine.toggleMark(marked, cell).state
+        assertEquals(CellMark.UNKNOWN, cleared.markAt(cell))
+    }
 
+    @Test fun correctGuessFindsCatAndAwardsPoints() {
+        val state = engine.newGame(level)
+        val cat = level.catCells.first()
+        val result = engine.revealCat(state, cat)
         assertTrue(result.accepted)
-        assertEquals(3, result.state.availablePieces.size)
-        assertEquals(1, result.state.movesPlayed)
+        assertTrue(result.foundCat)
+        assertEquals(CellMark.FOUND_CAT, result.state.markAt(cat))
+        assertEquals(2, result.state.foundCats)
+        assertEquals(100, result.state.score)
+        assertEquals(3, result.state.lives)
     }
 
-    @Test
-    fun gameOverStateRejectsFurtherMoves() {
-        val single = GameEngine.PIECE_CATALOG.first { it.id == "single" }
-        val state = GameState(availablePieces = listOf(single), isGameOver = true)
-        val result = engine.placePiece(state, single.id, Cell(0, 0))
+    @Test fun wrongGuessConsumesOneLife() {
+        val state = engine.newGame(level)
+        val wrong = (0 until level.size).flatMap { r ->
+            (0 until level.size).map { c -> Cell(r, c) }
+        }.first { it !in level.catCells }
+        val result = engine.revealCat(state, wrong)
+        assertEquals(2, result.state.lives)
+        assertEquals(0, result.state.foundCats)
+        assertFalse(result.state.isLost)
+    }
 
-        assertEquals(MoveError.GAME_OVER, result.error)
+    @Test fun thirdWrongGuessEndsGame() {
+        var state = engine.newGame(level)
+        val wrong = (0 until level.size).flatMap { r ->
+            (0 until level.size).map { c -> Cell(r, c) }
+        }.first { it !in level.catCells }
+        repeat(3) { state = engine.revealCat(state, wrong).state }
+        assertEquals(0, state.lives)
+        assertTrue(state.isLost)
+    }
+
+    @Test fun findingAllCatsWinsLevel() {
+        var state = engine.newGame(level)
+        level.catCells.forEach { state = engine.revealCat(state, it).state }
+        assertTrue(state.isWon)
+        assertEquals(level.size, state.foundCats)
+        assertEquals(level.size * 100, state.score)
+    }
+
+    @Test fun finishedGameRejectsFurtherMoves() {
+        var state = engine.newGame(level)
+        level.catCells.forEach { state = engine.revealCat(state, it).state }
+        val result = engine.toggleMark(state, Cell(0, 0))
+        assertEquals(MoveError.GAME_FINISHED, result.error)
         assertEquals(state, result.state)
     }
 
-    @Test
-    fun bestScoreNeverDecreases() {
-        val state = engine.newGame(bestScore = 500)
-        val piece = state.availablePieces.first()
-        val result = engine.placePiece(state, piece.id, Cell(0, 0))
-
-        assertEquals(500, result.state.bestScore)
+    @Test fun outOfBoundsCellIsRejected() {
+        val state = engine.newGame(level)
+        val result = engine.revealCat(state, Cell(6, 0))
+        assertEquals(MoveError.OUT_OF_BOUNDS, result.error)
+        assertEquals(state, result.state)
     }
 }
