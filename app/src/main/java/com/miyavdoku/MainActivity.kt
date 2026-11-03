@@ -19,6 +19,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -90,7 +92,7 @@ private fun MiyavDokuScreen(viewModel: GameViewModel) {
                                 val bg = regionPalette[game.level.regionAt(cell) % regionPalette.size]
                                 Box(Modifier.weight(1f).aspectRatio(1f).background(bg, RoundedCornerShape(9.dp))
                                     .border(if (selectedCell) 3.dp else 1.dp, if (selectedCell) purple else Color.White.copy(alpha = .9f), RoundedCornerShape(9.dp))
-                                    .clickable { viewModel.selectCell(cell) }, contentAlignment = Alignment.Center) {
+                                    .pointerInput(cell, game.isFinished) { detectTapGestures(onTap = { viewModel.tapCell(cell) }, onDoubleTap = { viewModel.doubleTapCell(cell) }) }, contentAlignment = Alignment.Center) {
                                     Text(when (mark) {
                                         CellMark.EMPTY_MARK -> "×"
                                         CellMark.FOUND_CAT -> "🐱"
