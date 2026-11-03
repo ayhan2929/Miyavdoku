@@ -27,3 +27,18 @@ Android için renkli, kedi temalı mantık ve gizli kedi bulma oyunu.
 
 ## Geliştirme durumu
 Pawdoku tarzı gizli kedi bulma mekaniğine geçiş yapıldı. Android derlemesi ve otomatik test çalıştırması henüz doğrulanmadı.
+
+
+## Current implementation
+
+- The game screen is connected to a lifecycle-aware `GameViewModel` using `StateFlow`.
+- Puzzle state and actions are kept outside Compose UI.
+- The built-in catalog contains 30 generated 6×6 levels. Each level is validated for one cat per row, column and color region, with no touching cats.
+- Players can select cells, place/remove pencil marks, reveal a selected cell, use a limited hint, restart, and advance after winning.
+- Unit tests cover the catalog and the core game rules.
+
+The 30 catalog entries currently use six rotated solution patterns. They are a starter level set, not 30 individually authored difficulty-balanced puzzles. Persistent progress, real coin/hint economy, full rule-solving hints, and final art assets remain future work.
+
+## Build verification
+
+GitHub Actions is configured to run Android unit tests on pushes and pull requests. A successful workflow run is required before considering the project build-verified.
