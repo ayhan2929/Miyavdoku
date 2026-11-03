@@ -126,9 +126,12 @@ class GameEngine {
             (0 until state.level.size).asSequence().map { column -> Cell(row, column) }
         }.firstOrNull { cell ->
             state.markAt(cell) == CellMark.UNKNOWN &&
-                (cell !in state.level.catCells || found.any { it.row == cell.row || it.column == cell.column ||
-                    state.level.regionAt(it) == state.level.regionAt(cell) ||
-                    (abs(it.row - cell.row) <= 1 && abs(it.column - cell.column) <= 1) })
+                found.any { cat ->
+                    cat.row == cell.row ||
+                        cat.column == cell.column ||
+                        state.level.regionAt(cat) == state.level.regionAt(cell) ||
+                        (abs(cat.row - cell.row) <= 1 && abs(cat.column - cell.column) <= 1)
+                }
         } ?: return MoveResult(state, MoveError.NO_HINT_AVAILABLE)
 
         val marks = state.marks.toMutableList()
