@@ -50,15 +50,12 @@ game_file = game_dir / "game.js"
 js = game_file.read_text(encoding="utf-8")
 js = js.replace('var da = "en de es fr it br ru".split(" "),',
                 'var da = "en de es fr it br ru tr".split(" "),')
-js, count = re.subn(
-    r'            var a = navigator\\.xa \\|\\| navigator\\.language,\\s+a = a\\.toLowerCase\\(\\);\\s+z = "en";.*?\\n            w = da\\.indexOf\\(z\\);',
-    '            z = "tr";\\n            w = da.indexOf(z);',
-    js, count=1, flags=re.S
-)
-if count != 1:
-    # Retry with the literal regular expression (kept separate for readable diagnostics).
-    pattern = r'            var a = navigator\\.xa \\|\\| navigator\\.language,\\s+a = a\\.toLowerCase\\(\\);\\s+z = "en";.*?\\n            w = da\\.indexOf\\(z\\);'
-    raise RuntimeError("Oyun dili seçimi değiştirilemedi; kaynak kod beklenen biçimde değil.")
+start = js.find('            var a = navigator.xa || navigator.language,')
+end_marker = '            w = da.indexOf(z);'
+end = js.find(end_marker, start)
+if start < 0 or end < 0:
+    raise RuntimeError("Oyun dili seçimi beklenen biçimde bulunamadı.")
+js = js[:start] + '            z = "tr";\\n' + end_marker + js[end + len(end_marker):]
 game_file.write_text(js, encoding="utf-8")
 
 strings_file = root / "app/src/main/res/values/strings.xml"
