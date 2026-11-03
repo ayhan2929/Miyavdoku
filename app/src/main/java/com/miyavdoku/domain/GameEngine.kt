@@ -101,6 +101,7 @@ class GameEngine {
         val error = validateCell(state, cell)
         if (error != null) return MoveResult(state, error)
         if (state.markAt(cell) == CellMark.FOUND_CAT) return MoveResult(state, MoveError.ALREADY_FOUND)
+        if (state.markAt(cell) == CellMark.EMPTY_MARK) return MoveResult(state, MoveError.ALREADY_MARKED)
 
         if (cell !in state.level.catCells) {
             val lives = (state.lives - 1).coerceAtLeast(0)
