@@ -94,6 +94,46 @@ private fun MiyavDokuScreen(viewModel: GameViewModel) {
             containerColor = paper
         )
     }
+    if (game.isFinished) {
+        AlertDialog(
+            onDismissRequest = { },
+            title = {
+                Text(
+                    if (game.isWon) "MİYAV! BÖLÜM TAMAMLANDI" else "CANLAR TÜKENDİ",
+                    color = if (game.isWon) purple else Color(0xFFE65E80),
+                    fontWeight = FontWeight.ExtraBold
+                )
+            },
+            text = {
+                Text(
+                    if (game.isWon) "Tüm kedileri buldun! ${game.score} puan kazandın."
+                    else "Bu bölümdeki üç canını da kullandın. Aynı bölümü yeniden deneyebilirsin.",
+                    color = ink
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (game.isWon) viewModel.goToNextLevel() else viewModel.restartLevel()
+                }) {
+                    Text(
+                        when {
+                            !game.isWon -> "TEKRAR DENE"
+                            game.level.id < 30 -> "SONRAKİ BÖLÜM"
+                            else -> "TAMAM"
+                        },
+                        color = purple,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLevelPicker = true }) {
+                    Text("BÖLÜMLER", color = ink)
+                }
+            },
+            containerColor = paper
+        )
+    }
     Surface(Modifier.fillMaxSize(), color = paper) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
