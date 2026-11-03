@@ -95,17 +95,23 @@ privacy = """<br><br>
 """
 (game_dir / "privarcypolicy.txt").write_text(privacy, encoding="utf-8")
 
-# Reklamları tamamen devre dışı bırak ve banner alanını yerleşimden kaldır.
+# Reklam alanını görünmez ve sıfır yükseklikte tut; Java tarafındaki R.id.adView referansı korunur.
 layout_file = root / "app/src/main/res/layout/activity_main.xml"
 layout = layout_file.read_text(encoding="utf-8")
-layout, removed_banner = re.subn(
-    r'\s*<com\.google\.android\.gms\.ads\.AdView\b.*?</com\.google\.android\.gms\.ads\.AdView>',
-    '',
-    layout,
-    flags=re.DOTALL
-)
-if removed_banner != 1:
-    raise RuntimeError(f"Banner görünümü bulunamadı veya birden fazla bulundu: {removed_banner}")
+ad_view_pattern = r'<com\.google\.android\.gms\.ads\.AdView\b[^>]*>'
+match = re.search(ad_view_pattern, layout, flags=re.DOTALL)
+if not match:
+    raise RuntimeError("AdView tanımı bulunamadı.")
+ad_tag = match.group(0)
+if re.search(r'android:layout_height="[^"]*"', ad_tag):
+    ad_tag = re.sub(r'android:layout_height="[^"]*"', 'android:layout_height="0dp"', ad_tag, count=1)
+else:
+    ad_tag = ad_tag[:-1] + ' android:layout_height="0dp">'
+if re.search(r'android:visibility="[^"]*"', ad_tag):
+    ad_tag = re.sub(r'android:visibility="[^"]*"', 'android:visibility="gone"', ad_tag, count=1)
+else:
+    ad_tag = ad_tag[:-1] + ' android:visibility="gone">'
+layout = layout[:match.start()] + ad_tag + layout[match.end():]
 layout_file.write_text(layout, encoding="utf-8")
 
 # Reklam kimliği iznini ve AdMob başlatma meta verilerini kaldır.
@@ -120,13 +126,11 @@ manifest_file.write_text(manifest, encoding="utf-8")
 resource_file = root / "app/src/main/res/values/strings.xml"
 resources = resource_file.read_text(encoding="utf-8")
 for key in ("enable_banner", "enable_inter", "enable_reward"):
-    resources, count = re.subn(
+    resources = re.sub(
         r'(<bool\s+name="' + key + r'">)\s*true\s*(</bool>)',
         r'\1false\2',
         resources
     )
-    if count > 1:
-        raise RuntimeError("Birden fazla reklam ayarı bulundu: " + key)
 resource_file.write_text(resources, encoding="utf-8")
 
 # Oyun modları arasında reklam çağrısı yapılmasını da engelle.
@@ -135,13 +139,4 @@ hooks = hooks_file.read_text(encoding="utf-8")
 hooks = hooks.replace("gradle.showInter();", "// Reklamlar kapalı.")
 hooks_file.write_text(hooks, encoding="utf-8")
 
-# Banner görünümü kaldırıldığı için eski reklam yöneticisindeki gizleme kodunu null güvenli yap.
-ad_java = root / "app/src/main/java/com/company/game/UtilsAdmob.java"
-ad_code = ad_java.read_text(encoding="utf-8")
-ad_code = ad_code.replace(
-    "AdView banner = activity.findViewById(R.id.adView);\n                    banner.setVisibility(View.GONE);",
-    "AdView banner = activity.findViewById(R.id.adView);\n                    if (banner != null) banner.setVisibility(View.GONE);"
-)
-ad_java.write_text(ad_code, encoding="utf-8")
-
-print("Türkçe yerelleştirme uygulandı; banner görünümü ve reklam gösterimleri kaldırıldı.")
+print("Türkçe yerelleştirme uygulandı; banner alanı gizlendi ve reklam gösterimleri kapatıldı.")
